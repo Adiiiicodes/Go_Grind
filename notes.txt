@@ -1,0 +1,119 @@
+## Module vs Package vs Folder in Go
+
+Based on your screenshot:
+
+```
+Bubblesort/                    ← MODULE ROOT (has go.mod)
+├── go.mod                     ← MODULE DEFINITION
+├── main.go                    ← PACKAGE main
+└── algo1/                     ← FOLDER
+    └── bubblesort.go          ← PACKAGE algo1
+```
+
+---
+
+## 1. Module
+
+**Definition:** A collection of Go packages with a `go.mod` file at the root.
+
+**In your screenshot:**
+- `Bubblesort/` is the **module root** (has `go.mod`)
+- Module name is whatever is in `go.mod` (probably `Bubblesort` or `algo1`)
+
+**`go.mod` file:**
+```go
+module Bubblesort  // ← This is the module name
+
+go 1.21
+```
+
+**Purpose:** Tracks dependencies, versions, and provides import paths.
+
+---
+
+## 2. Package
+
+**Definition:** A group of `.go` files in the same directory with the same `package` declaration.
+
+**In your screenshot:**
+- `main.go` → `package main` → **main package**
+- `algo1/bubblesort.go` → `package algo1` → **algo1 package**
+
+**Key rules:**
+- All files in same folder MUST have same package name
+- `package main` = executable program
+- Any other package name = reusable library
+
+---
+
+## 3. Folder (Directory)
+
+**Definition:** A file system container for files.
+
+**In your screenshot:**
+- `Bubblesort/` → Module root folder
+- `algo1/` → Subfolder containing the `algo1` package
+
+**Import path uses folder structure:**
+```go
+import "Bubblesort/algo1"  // ← Module name + folder path
+```
+
+---
+
+## The Relationship
+
+```
+MODULE (Bubblesort)
+├── go.mod
+├── PACKAGE main (main.go)
+└── FOLDER algo1/
+    └── PACKAGE algo1 (bubblesort.go)
+```
+
+| Concept | Example | How to Identify |
+|---------|---------|-----------------|
+| **Module** | `Bubblesort` | Has `go.mod` file |
+| **Package** | `main` or `algo1` | `package` declaration in `.go` files |
+| **Folder** | `algo1/` | Directory on filesystem |
+
+---
+
+## Your Import Explained
+
+Your code:
+```go
+import "algo1/algo1"
+```
+
+**This works if:**
+1. `go.mod` has: `module algo1`
+2. Folder is: `algo1/`
+3. Package is: `package algo1`
+
+**Then:**
+- `algo1/algo1` = module name + folder name
+- `algo1.Bubblesort()` = package name + function name
+
+---
+
+## Quick Reference Table
+
+| What | Is It? | Location |
+|------|--------|----------|
+| `Bubblesort/` | Module root | Top-level folder with go.mod |
+| `go.mod` | Module definition | Root of module |
+| `main.go` | File | Contains `package main` |
+| `main` | Package | Defined in `main.go` |
+| `algo1/` | Folder | Subfolder under module root |
+| `bubblesort.go` | File | Contains `package algo1` |
+| `algo1` | Package | Defined in `bubblesort.go` |
+
+---
+
+## The Golden Rule
+
+```
+Import Path = Module Name + Folder Path
+Package Name = What's declared in the file
+```
