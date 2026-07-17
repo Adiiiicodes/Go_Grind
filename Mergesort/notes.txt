@@ -1,0 +1,41 @@
+## The `...` operator in Go
+
+**3 uses:**
+
+### 1. Spread/Unpack (when calling functions)
+```go
+slice := []int{1, 2, 3}
+append(slice, 4, 5)        // normal
+append(slice, []int{4,5}...) // unpack the slice
+```
+
+### 2. Variadic parameters (when defining functions)
+```go
+func sum(nums ...int) int {  // accepts any number of ints
+    total := 0
+    for _, n := range nums {
+        total += n
+    }
+    return total
+}
+sum(1, 2, 3)     // 6
+sum(1, 2, 3, 4)  // 10
+```
+
+### 3. Array length (compile-time)
+```go
+arr := [...]int{1, 2, 3}  // compiler counts: [3]int
+```
+
+---
+
+**In your code:**
+```go
+result = append(result, left[i:]...)  // unpack left[i:] into individual elements
+```
+Same as writing:
+```go
+for _, v := range left[i:] {
+    result = append(result, v)
+}
+```
