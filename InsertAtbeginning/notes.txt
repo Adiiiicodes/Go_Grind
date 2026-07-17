@@ -1,0 +1,88 @@
+## 1. Why the error with `size = len(arr)`?
+
+**Answer:** When `size = len(arr) = 5`, your loop runs for `i = 5, 4, 3, 2, 1`.
+
+```go
+for i := size; i > 0; i-- {
+    arr[i] = arr[i-1]
+}
+```
+
+**Execution trace:**
+- `i=5`: `arr[5] = arr[4]` → **❌ PANIC!** `arr[5]` doesn't exist (array indices: 0,1,2,3,4)
+
+| i | Assignment | Issue |
+|---|------------|-------|
+| 5 | `arr[5] = arr[4]` | ❌ arr[5] out of bounds |
+| 4 | `arr[4] = arr[3]` | ✅ |
+| 3 | `arr[3] = arr[2]` | ✅ |
+| 2 | `arr[2] = arr[1]` | ✅ |
+| 1 | `arr[1] = arr[0]` | ✅ |
+
+---
+
+## 2. Why did setting `size = 4` fix it?
+
+**Answer:** Now the loop runs for `i = 4, 3, 2, 1`.
+
+```go
+// size = 4
+for i := size; i > 0; i-- {
+    arr[i] = arr[i-1]
+}
+```
+
+**Execution trace:**
+| i | Assignment | Status |
+|---|------------|--------|
+| 4 | `arr[4] = arr[3]` | ✅ Shifts 85 to index 4 |
+| 3 | `arr[3] = arr[2]` | ✅ Shifts 45 to index 3 |
+| 2 | `arr[2] = arr[1]` | ✅ Shifts 15 to index 2 |
+| 1 | `arr[1] = arr[0]` | ✅ Shifts 5 to index 1 |
+
+**Result:** `[5, 5, 15, 45, 85]` → Then `arr[0] = 10` → `[10, 5, 15, 45, 85]`
+
+---
+
+## 3. Why is there a 5 at index 0 after shifting? Shouldn't it be nil?
+
+**Answer:** **Go arrays CANNOT have "nil" or empty slots.** They are **fixed-size** and always hold values.
+
+### What happened:
+1. `arr[1] = arr[0]` (5 gets copied to index 1)
+2. `arr[0]` **still holds 5** (nothing overwrote it)
+
+```go
+// Original: [5, 15, 45, 85, 92]
+
+// After shifts:
+// arr[4] = arr[3] → [5, 15, 45, 85, 85]
+// arr[3] = arr[2] → [5, 15, 45, 45, 85]
+// arr[2] = arr[1] → [5, 15, 15, 45, 85]
+// arr[1] = arr[0] → [5, 5, 15, 45, 85]
+//                       ↑
+//                    Duplicate 5!
+```
+
+### Why no "nil"?
+- Arrays are **value types** with fixed memory
+- Each slot **must** contain a value of the declared type
+- For `int`, zero value is `0`, not `nil`
+
+### If you want to "remove" the duplicate:
+```go
+arr[0] = value  // Overwrites the duplicate 5
+// Now: [10, 5, 15, 45, 85] ✅
+```
+
+
+---
+
+## Summary
+
+| Question | Answer |
+|----------|--------|
+| Why error with `len(arr)`? | `len(arr)=5`, loop tried `arr[5]` → out of bounds |
+| Why `size=4` fixes it? | Loop runs `i=4,3,2,1` → all indices valid |
+| Why 5 at index 0? | Array slots can't be empty; 5 gets duplicated during shift |
+| How to fix? | Overwrite `arr[0]` with new value after shifting |
