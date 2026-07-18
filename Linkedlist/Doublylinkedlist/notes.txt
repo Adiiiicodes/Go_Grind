@@ -1,0 +1,70 @@
+for displaying it backward the node with next value should be nil right , how are we considering and utilising this approach ?
+Great question! Let me break down the logic:
+
+First loop (for cur.next != nil):
+
+Starts at the head
+Keeps moving forward while there IS a next node (cur.next != nil)
+Stops when cur.next == nil — meaning cur is now the last node (tail)
+Key insight: When the loop exits, cur is pointing to the last node because that's the only node where next == nil.
+
+Second loop (for cur != nil):
+
+Now we have the tail, so we traverse backward using cur.prev
+Keeps printing and moving backward until cur == nil (we've gone past the head)
+Example with list [10 → 20 → 30]:
+
+
+First loop finds:  10 → 20 → 30(next=nil) ✓ STOP HERE
+                                    ↑
+                                   cur
+
+Second loop traverses backward:
+30 → 20 → 10 → nil
+↑                ↑
+cur starts     loop stops
+So yes, we're using the fact that the last node has next == nil to stop the first loop and identify the tail. Then we leverage the prev pointers in a doubly linked list to reverse direction and print backward. It's efficient because we don't search or count—we just follow the pointers in both directions.
+
+so time complexity is O(n) right ? is their any optimised way to print it backward
+Yes, it's O(n) — and honestly, you can't do better than O(n) when printing all n elements. You must visit each node at least once.
+
+However, there's a practical optimization:
+
+Store a tail pointer in the DoublyLinkedList structure instead of searching for it every time:
+
+
+type DoublyLinkedList struct {
+    head *Node
+    tail *Node  // Add this
+}
+
+func (l *DoublyLinkedList) Insert(data int) {
+    newNode := &Node{data: data}
+    if l.head == nil {
+        l.head = newNode
+        l.tail = newNode  // Set tail when list is empty
+        return
+    }
+    cur := l.head
+    for cur.next != nil {
+        cur = cur.next
+    }
+    cur.next = newNode
+    newNode.prev = cur
+    l.tail = newNode  // Update tail on every insert
+}
+
+func (l *DoublyLinkedList) DisplayBackward() {
+    cur := l.tail  // Start directly from tail (no search needed)
+    for cur != nil {
+        print(cur.data, " ")
+        cur = cur.prev
+    }
+    println()
+}
+Trade-off:
+
+Time: Still O(n) for printing, but eliminates the first traversal loop
+Space: Uses one extra pointer (+8 bytes)
+Benefit: DisplayBackward now goes straight to the tail instead of walking the entire list first
+This is a common pattern in doubly linked lists—maintain both head and tail for O(1) access to both ends.
