@@ -4,7 +4,7 @@ import ("fmt"
 		"time")
 
 func main() {
-	arr := []int{100 , 2 , 1 , 4 , 81 , 6 , 59 , 7}
+	arr := []int{5,2,4,6,2,7,8 , 7}
 	start := time.Now()
 	sortedArray := algo1.Bubblesort(arr)
 	totaltime := time.Since(start)
