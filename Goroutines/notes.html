@@ -45,6 +45,7 @@
             gap: 0;
             margin-bottom: 20px;
             border-bottom: 2px solid #0f3460;
+            flex-wrap: wrap;
         }
         .tabs button {
             padding: 10px 25px;
@@ -138,6 +139,9 @@
         .learn-content .highlight.pink {
             border-left-color: #ff6b6b;
         }
+        .learn-content .highlight.blue {
+            border-left-color: #48dbfb;
+        }
         .learn-content table {
             width: 100%;
             border-collapse: collapse;
@@ -161,6 +165,15 @@
         .learn-content .blue-text { color: #48dbfb; }
         .learn-content .yellow-text { color: #feca57; }
         .learn-content .red-text { color: #ff6b6b; }
+        .learn-content .box {
+            background: #0f3460;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin: 8px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+        .learn-content .emoji-big { font-size: 20px; }
 
         /* Race Tab Controls */
         .controls {
@@ -375,6 +388,7 @@
     <div class="tabs">
         <button class="active" data-tab="race">🏁 Race</button>
         <button data-tab="learn">📖 Learn</button>
+        <button data-tab="channels">📡 Channels</button>
     </div>
 
     <!-- Race Tab -->
@@ -485,6 +499,163 @@
                 <b>✅ Your Understanding is 100% Correct:</b><br><br>
                 "The loop doesn't wait for the goroutine to complete — it just starts the execution, detaches it, and moves on to the next iteration."<br><br>
                 That's the whole point of goroutines — <b style="color:#48dbfb;">non-blocking concurrent execution.</b>
+            </div>
+        </div>
+    </div>
+
+    <!-- Channels Tab -->
+    <div id="channels" class="tab-content">
+        <div class="learn-content">
+            <h2>📡 Why Channels Are Important</h2>
+
+            <h3>Without Channels (❌ Dangerous)</h3>
+            <pre>var sharedData string
+
+go func() {
+    sharedData = "Hello"  // G1 writes
+}()
+
+go func() {
+    fmt.Println(sharedData)  // G2 reads
+}()
+// 💀 DATA RACE! G1 and G2 fight over sharedData</pre>
+
+            <h3>With Channels (✅ Safe)</h3>
+            <pre>ch := make(chan string)
+
+go func() {
+    ch <- "Hello"  // G1 sends
+}()
+
+msg := <-ch        // Main receives
+fmt.Println(msg)   // Safe!</pre>
+
+            <div class="highlight blue">
+                <b>🔑 "Without channels, data has no direction. Channels connect 2 goroutines systematically."</b>
+            </div>
+
+            <h2>⏸️ The "Blocking" Behavior</h2>
+
+            <h3>Unbuffered Channels (Default)</h3>
+            <pre>ch := make(chan string)
+
+// Sender blocks until receiver is ready
+go func() {
+    ch <- "Hello"  // ⏸️ BLOCKS here until someone receives
+}()
+
+msg := <-ch  // ✅ Receiver ready, unblocks sender</pre>
+
+            <div class="box">
+                <span class="emoji-big">😴</span> Sender: "I have data, but no one is receiving..."<br>
+                <span class="emoji-big">👋</span> Receiver: "I'm ready! Give me data!"<br>
+                <span class="emoji-big">✅</span> Sender: "Here you go!"
+            </div>
+
+            <h3>Buffered Channels (With Capacity)</h3>
+            <pre>ch := make(chan string, 2)  // Buffer size 2
+
+// Sender doesn't block until buffer is full
+ch <- "Hello"  // ✅ Doesn't block (buffer has space)
+ch <- "World"  // ✅ Doesn't block (buffer has space)
+ch <- "!"      // ❌ BLOCKS (buffer full)
+
+msg := <-ch    // Takes "Hello" from buffer
+msg := <-ch    // Takes "World" from buffer</pre>
+
+            <div class="box">
+                <b>BUFFERED CHANNEL (size 2):</b><br>
+                ┌─────────────────────────────────────┐<br>
+                │  [Hello]  [World]  [  ]  [  ]  [  ] │<br>
+                │   ↑         ↑                      │<br>
+                │   │         │                      │<br>
+                │   └─────────┴─── Buffer has 2 slots│<br>
+                └─────────────────────────────────────┘
+            </div>
+
+            <h2>🏗️ Real-World Applications</h2>
+
+            <h3>1. Worker Pool (Parallel Processing)</h3>
+            <pre>jobs := make(chan int, 100)
+results := make(chan int, 100)
+
+// Start 10 workers
+for w := 0; w < 10; w++ {
+    go worker(jobs, results)
+}
+
+// Send jobs
+for j := 0; j < 100; j++ {
+    jobs <- j
+}
+
+// Collect results
+for r := 0; r < 100; r++ {
+    result := <-results
+    fmt.Println(result)
+}</pre>
+
+            <h3>2. Signal Handling</h3>
+            <pre>stop := make(chan bool)
+
+go func() {
+    // Do work...
+    if somethingImportantHappens {
+        stop <- true  // Signal main to stop
+    }
+}()
+
+<-stop  // Wait for stop signal
+fmt.Println("Shutting down...")</pre>
+
+            <h3>3. Fan-Out / Fan-In</h3>
+            <pre>// Fan-Out: One channel feeds many workers
+input := make(chan int)
+for i := 0; i < 5; i++ {
+    go worker(input)  // All workers read from same channel
+}
+
+// Fan-In: Many channels feed one output
+output := make(chan int)
+for i := 0; i < 5; i++ {
+    go producer(i, output)  // All producers write to same channel
+}</pre>
+
+            <h2>📊 The Complete Picture</h2>
+            <div class="box">
+                ┌─────────────────────────────────────────────────────────────┐<br>
+                │                    CHANNEL COMMUNICATION                    │<br>
+                │                                                             │<br>
+                │   GOROUTINE A              CHANNEL              GOROUTINE B │<br>
+                │   ┌──────────┐    send    ┌──────────┐   receive  ┌──────────┐│<br>
+                │   │          │ ─────────► │  [data]  │ ◄───────── │          ││<br>
+                │   │   Work   │            └──────────┘            │   Work   ││<br>
+                │   │          │                                    │          ││<br>
+                │   └──────────┘                                    └──────────┘│<br>
+                │                                                             │<br>
+                │   Key Points:                                               │<br>
+                │   • Sender blocks until receiver is ready (unbuffered)     │<br>
+                │   • Receiver blocks until data is available                 │<br>
+                │   • Channels are TYPE-SAFE (only one data type)            │<br>
+                │   • Channels are SYNCHRONIZATION primitives                │<br>
+                └─────────────────────────────────────────────────────────────┘
+            </div>
+
+            <h2>📋 Summary</h2>
+            <table>
+                <tr><th>Concept</th><th>What It Does</th></tr>
+                <tr><td><code>make(chan T)</code></td><td>Creates a channel for type T</td></tr>
+                <tr><td><code>ch <- value</code></td><td>Sends value into channel (blocks if full)</td></tr>
+                <tr><td><code>value := <-ch</code></td><td>Receives from channel (blocks if empty)</td></tr>
+                <tr><td><b>Unbuffered</b></td><td>Sender and receiver MUST be ready at same time</td></tr>
+                <tr><td><b>Buffered</b></td><td>Can send up to buffer size without receiver</td></tr>
+                <tr><td><b>Blocking</b></td><td>Main synchronization mechanism</td></tr>
+            </table>
+
+            <div class="highlight green">
+                <b>🏆 The Golden Rule:</b><br><br>
+                <i>"Don't communicate by sharing memory; share memory by communicating."</i><br><br>
+                Channels are Go's way of <b>safely passing data</b> between goroutines — they are <b style="color:#48dbfb;">synchronization + communication</b> rolled into one elegant primitive.
             </div>
         </div>
     </div>
