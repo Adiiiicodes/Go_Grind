@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Goroutine Execution Visualizer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Courier New', monospace;
+            background: #1a1a2e;
+            color: #eee;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            background: #16213e;
+            padding: 25px;
+            border-radius: 15px;
+            max-width: 950px;
+            width: 100%;
+            box-shadow: 0 0 30px rgba(0,0,0,0.7);
+        }
+        h1 {
+            text-align: center;
+            color: #00d2ff;
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 20px;
+            font-size: 13px;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #0f3460;
+        }
+        .tabs button {
+            padding: 10px 25px;
+            background: transparent;
+            border: none;
+            color: #888;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+            font-family: 'Courier New', monospace;
+        }
+        .tabs button:hover {
+            color: #fff;
+        }
+        .tabs button.active {
+            color: #00d2ff;
+            border-bottom-color: #00d2ff;
+        }
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Learn Tab */
+        .learn-content {
+            max-height: 500px;
+            overflow-y: auto;
+            padding-right: 10px;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #ccc;
+        }
+        .learn-content::-webkit-scrollbar {
+            width: 6px;
+        }
+        .learn-content::-webkit-scrollbar-track {
+            background: #0f3460;
+            border-radius: 3px;
+        }
+        .learn-content::-webkit-scrollbar-thumb {
+            background: #00d2ff;
+            border-radius: 3px;
+        }
+        .learn-content h2 {
+            color: #00d2ff;
+            font-size: 18px;
+            margin: 15px 0 8px 0;
+        }
+        .learn-content h3 {
+            color: #feca57;
+            font-size: 15px;
+            margin: 12px 0 6px 0;
+        }
+        .learn-content code {
+            background: #0f3460;
+            padding: 2px 8px;
+            border-radius: 4px;
+            color: #48dbfb;
+            font-size: 13px;
+        }
+        .learn-content pre {
+            background: #0f3460;
+            padding: 12px 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 8px 0;
+            font-size: 13px;
+            color: #48dbfb;
+            border-left: 3px solid #00d2ff;
+        }
+        .learn-content .highlight {
+            background: #0f3460;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin: 8px 0;
+            border-left: 3px solid #feca57;
+        }
+        .learn-content .highlight.green {
+            border-left-color: #4CAF50;
+        }
+        .learn-content .highlight.pink {
+            border-left-color: #ff6b6b;
+        }
+        .learn-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+            font-size: 13px;
+        }
+        .learn-content table th {
+            background: #0f3460;
+            color: #00d2ff;
+            padding: 8px 12px;
+            text-align: left;
+        }
+        .learn-content table td {
+            padding: 6px 12px;
+            border-bottom: 1px solid #0f3460;
+        }
+        .learn-content table tr:hover td {
+            background: #1a2a4a;
+        }
+        .learn-content .green-text { color: #4CAF50; }
+        .learn-content .blue-text { color: #48dbfb; }
+        .learn-content .yellow-text { color: #feca57; }
+        .learn-content .red-text { color: #ff6b6b; }
+
+        /* Race Tab Controls */
+        .controls {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .controls button {
+            padding: 8px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'Courier New', monospace;
+        }
+        .controls button:hover {
+            transform: scale(1.05);
+        }
+        #startBtn {
+            background: #00d2ff;
+            color: #1a1a2e;
+        }
+        #resetBtn {
+            background: #ff6b6b;
+            color: #1a1a2e;
+        }
+        .controls label {
+            color: #888;
+            font-size: 12px;
+        }
+        .controls input[type="range"] {
+            width: 120px;
+            accent-color: #00d2ff;
+        }
+        .controls select {
+            background: #0f3460;
+            color: #eee;
+            border: 1px solid #1a1a2e;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+
+        .legend {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin: 10px 0 15px 0;
+            font-size: 12px;
+            color: #888;
+        }
+        .legend span {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .legend .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .legend .dot.running { background: #00d2ff; }
+        .legend .dot.completed { background: #4CAF50; }
+
+        .status {
+            text-align: center;
+            margin: 8px 0 12px 0;
+            font-size: 14px;
+            color: #00d2ff;
+            min-height: 22px;
+        }
+
+        .race-area {
+            background: #0f3460;
+            border-radius: 10px;
+            padding: 15px;
+            min-height: 350px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .race-area::-webkit-scrollbar {
+            width: 4px;
+        }
+        .race-area::-webkit-scrollbar-thumb {
+            background: #00d2ff;
+            border-radius: 2px;
+        }
+
+        .goroutine {
+            display: flex;
+            align-items: center;
+            margin: 3px 0;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 13px;
+            transition: all 0.1s;
+            opacity: 0;
+            transform: translateX(-100%);
+        }
+        .goroutine.active {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        .goroutine .label {
+            min-width: 60px;
+            font-weight: bold;
+            color: #fff;
+            font-size: 12px;
+        }
+        .goroutine .value {
+            background: #00d2ff;
+            color: #1a1a2e;
+            padding: 1px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-left: 6px;
+            font-size: 13px;
+        }
+        .goroutine .progress-bar {
+            flex: 1;
+            height: 16px;
+            background: #1a1a2e;
+            border-radius: 8px;
+            margin-left: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+        .goroutine .progress-bar .fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #00d2ff, #7b2ffc);
+            border-radius: 8px;
+            transition: width 0.1s;
+        }
+        .goroutine .progress-bar .text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 9px;
+            color: #fff;
+            font-weight: bold;
+        }
+        .goroutine .position {
+            margin-left: 12px;
+            font-size: 11px;
+            color: #888;
+            min-width: 50px;
+            text-align: right;
+        }
+        .goroutine.completed .progress-bar .fill {
+            background: #4CAF50;
+        }
+        .goroutine.completed .position {
+            color: #4CAF50;
+        }
+        .goroutine .color-0 { border-left: 3px solid #ff6b6b; }
+        .goroutine .color-1 { border-left: 3px solid #feca57; }
+        .goroutine .color-2 { border-left: 3px solid #48dbfb; }
+        .goroutine .color-3 { border-left: 3px solid #1dd1a1; }
+        .goroutine .color-4 { border-left: 3px solid #5f27cd; }
+        .goroutine .color-5 { border-left: 3px solid #f368e0; }
+        .goroutine .color-6 { border-left: 3px solid #ff9ff3; }
+        .goroutine .color-7 { border-left: 3px solid #54a0ff; }
+        .goroutine .color-8 { border-left: 3px solid #5f27cd; }
+        .goroutine .color-9 { border-left: 3px solid #00d2d3; }
+
+        .result-area {
+            margin-top: 12px;
+            padding: 12px 15px;
+            background: #0f3460;
+            border-radius: 10px;
+        }
+        .result-area .result-label {
+            color: #888;
+            font-size: 12px;
+        }
+        .result-area .result-values {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-top: 5px;
+        }
+        .result-area .result-values .item {
+            background: #00d2ff;
+            color: #1a1a2e;
+            padding: 2px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 15px;
+            opacity: 0;
+            transition: all 0.3s;
+        }
+        .result-area .result-values .item.visible {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🏃 Goroutine Race Visualizer</h1>
+    <div class="subtitle">Watch goroutines race to print to the terminal</div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+        <button class="active" data-tab="race">🏁 Race</button>
+        <button data-tab="learn">📖 Learn</button>
+    </div>
+
+    <!-- Race Tab -->
+    <div id="race" class="tab-content active">
+        <div class="controls">
+            <button id="startBtn">▶ Start Race</button>
+            <button id="resetBtn">⟳ Reset</button>
+            <label>Speed: <input type="range" id="speedSlider" min="1" max="10" value="5"></label>
+            <label>Goroutines: 
+                <select id="countSelect">
+                    <option value="5">5</option>
+                    <option value="10" selected>10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                </select>
+            </label>
+        </div>
+
+        <div class="legend">
+            <span><span class="dot running"></span> Running</span>
+            <span><span class="dot completed"></span> Completed</span>
+            <span style="color:#888;">← Order of completion</span>
+        </div>
+
+        <div class="status" id="status">Click "Start Race" to begin</div>
+
+        <div class="race-area" id="raceArea"></div>
+
+        <div class="result-area">
+            <div class="result-label">🏆 Finish Order (who printed first):</div>
+            <div class="result-values" id="resultValues"></div>
+        </div>
+    </div>
+
+    <!-- Learn Tab -->
+    <div id="learn" class="tab-content">
+        <div class="learn-content">
+            <h2>🎯 How Goroutines Work</h2>
+
+            <h3>The Loop:</h3>
+            <pre>for i := 0; i < 1000000; i++ {
+    go func(n int) {
+        fmt.Println("i: ", n)
+    }(i)
+}</pre>
+
+            <h3>Step-by-step Execution:</h3>
+            <div class="highlight">
+                <b style="color:#48dbfb;">Iteration 1 (i=0):</b><br>
+                ├── Start goroutine G0 → [G0] runs separately<br>
+                └── Continue loop immediately (DON'T wait for G0)<br><br>
+                <b style="color:#48dbfb;">Iteration 2 (i=1):</b><br>
+                ├── Start goroutine G1 → [G1] runs separately<br>
+                └── Continue loop immediately (DON'T wait for G1)<br><br>
+                <b style="color:#48dbfb;">Iteration 3 (i=2):</b><br>
+                ├── Start goroutine G2 → [G2] runs separately<br>
+                └── Continue loop immediately (DON'T wait for G2)
+            </div>
+
+            <h3>The Key Concept:</h3>
+            <div class="highlight green">
+                ⚡ THE LOOP FINISHES IN MILLISECONDS! ⚡<br>
+                All 1,000,000 goroutines are now running CONCURRENTLY<br><br>
+                [G0] [G1] [G2] [G3] [G4] [G5] ... [G999999]<br>
+                ALL FIGHTING TO PRINT TO TERMINAL
+            </div>
+
+            <h3>The "Detach" Concept:</h3>
+            <div class="highlight pink">
+                <code>go func(n int) { fmt.Println("i: ", n) }(i)</code><br><br>
+                THE LOOP DOESN'T WAIT HERE!<br>
+                It immediately continues to the next iteration.<br><br>
+                Main: "Hey G0, go print '0'"<br>
+                Main: "Hey G1, go print '1'" ← Doesn't wait for G0<br>
+                Main: "Hey G2, go print '2'" ← Doesn't wait for G1
+            </div>
+
+            <h3>Numbers:</h3>
+            <table>
+                <tr><th>Metric</th><th>Value</th></tr>
+                <tr><td>Goroutines started</td><td>1,000,000</td></tr>
+                <tr><td>Time to start all</td><td>~1-2 seconds</td></tr>
+                <tr><td>Time to print all</td><td>Much longer (race to terminal)</td></tr>
+                <tr><td>Order of printing</td><td class="yellow-text">RANDOM!</td></tr>
+            </table>
+
+            <h3>Why The Order Is Random:</h3>
+            <div class="highlight">
+                <b style="color:#feca57;">GO SCHEDULER (The Traffic Cop)</b><br><br>
+                • Decides which goroutine runs on which thread<br>
+                • Decides when each goroutine gets CPU time<br>
+                • Decides the execution order<br><br>
+                <span class="yellow-text">G5 → G0 → G3 → G7 → G1 → G8 → G2 → G4 → G6 → G9</span><br>
+                <span style="color:#888;">↑ RANDOM ORDER EVERY TIME! ↑</span>
+            </div>
+
+            <h3>Summary:</h3>
+            <table>
+                <tr><th>Question</th><th>Answer</th></tr>
+                <tr><td>Each iteration creates a goroutine?</td><td class="green-text">✅ YES! 1,000,000 iterations = 1,000,000 goroutines</td></tr>
+                <tr><td>Does the loop wait?</td><td class="red-text">❌ NO! It spawns and detaches immediately</td></tr>
+                <tr><td>When do they execute?</td><td>Whenever the scheduler decides</td></tr>
+                <tr><td>What's the output order?</td><td class="yellow-text">RANDOM! (depends on scheduler)</td></tr>
+                <tr><td>Can you control it?</td><td>Use channels or sync primitives</td></tr>
+            </table>
+
+            <div class="highlight green">
+                <b>✅ Your Understanding is 100% Correct:</b><br><br>
+                "The loop doesn't wait for the goroutine to complete — it just starts the execution, detaches it, and moves on to the next iteration."<br><br>
+                That's the whole point of goroutines — <b style="color:#48dbfb;">non-blocking concurrent execution.</b>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let running = false;
+    let goroutines = [];
+    let completed = [];
+    let timer = null;
+
+    // Tab switching
+    document.querySelectorAll('.tabs button').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            const tab = this.dataset.tab;
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.getElementById(tab).classList.add('active');
+        });
+    });
+
+    function createGoroutines(count) {
+        const area = document.getElementById('raceArea');
+        area.innerHTML = '';
+        goroutines = [];
+        completed = [];
+
+        for (let i = 0; i < count; i++) {
+            const div = document.createElement('div');
+            div.className = `goroutine color-${i % 10}`;
+            div.id = `g-${i}`;
+            div.innerHTML = `
+                <span class="label">G${i}</span>
+                <span class="value">${i}</span>
+                <div class="progress-bar">
+                    <div class="fill" style="width:0%"></div>
+                    <span class="text">0%</span>
+                </div>
+                <span class="position">⏳ waiting</span>
+            `;
+            area.appendChild(div);
+
+            const delay = 100 + Math.random() * 1500;
+            goroutines.push({
+                id: i,
+                value: i,
+                delay: delay,
+                completed: false,
+                progress: 0
+            });
+        }
+
+        document.getElementById('resultValues').innerHTML = '';
+    }
+
+    function getSpeed() {
+        return parseInt(document.getElementById('speedSlider').value) / 2;
+    }
+
+    function startRace() {
+        if (running) return;
+        running = true;
+        document.getElementById('status').textContent = '🏃 Race in progress...';
+
+        const count = parseInt(document.getElementById('countSelect').value);
+        createGoroutines(count);
+
+        const speed = getSpeed();
+        const tasks = goroutines.map((g, index) => ({
+            ...g,
+            completionTime: (500 + Math.random() * 2000) / speed,
+            index: index
+        }));
+
+        tasks.sort((a, b) => a.completionTime - b.completionTime);
+
+        let completedCount = 0;
+        const total = tasks.length;
+
+        tasks.forEach((task, order) => {
+            setTimeout(() => {
+                if (!running) return;
+
+                const element = document.getElementById(`g-${task.id}`);
+                if (element) {
+                    element.classList.add('completed');
+                    const fill = element.querySelector('.fill');
+                    const text = element.querySelector('.text');
+                    const position = element.querySelector('.position');
+                    
+                    fill.style.width = '100%';
+                    text.textContent = '🏁 DONE';
+                    position.textContent = `#${order + 1}`;
+                    position.style.color = '#4CAF50';
+                }
+
+                completed.push(task.value);
+                completedCount++;
+
+                const resultDiv = document.getElementById('resultValues');
+                const item = document.createElement('span');
+                item.className = 'item visible';
+                item.textContent = task.value;
+                resultDiv.appendChild(item);
+
+                document.getElementById('status').textContent = 
+                    `🏃 ${completedCount}/${total} goroutines completed...`;
+
+                if (completedCount === total) {
+                    document.getElementById('status').textContent = 
+                        `✅ Race finished! Order: ${completed.join(' → ')}`;
+                    running = false;
+                }
+            }, task.completionTime);
+        });
+
+        setTimeout(() => {
+            running = false;
+            if (completedCount < total) {
+                document.getElementById('status').textContent = 
+                    `⚠️ Race timed out (${completedCount}/${total} completed)`;
+            }
+        }, 5000 / speed + 2000);
+    }
+
+    function resetRace() {
+        running = false;
+        const count = parseInt(document.getElementById('countSelect').value);
+        createGoroutines(count);
+        document.getElementById('status').textContent = '🔄 Reset. Click "Start Race" to begin.';
+        document.getElementById('resultValues').innerHTML = '';
+    }
+
+    document.getElementById('startBtn').addEventListener('click', startRace);
+    document.getElementById('resetBtn').addEventListener('click', resetRace);
+    document.getElementById('countSelect').addEventListener('change', resetRace);
+
+    resetRace();
+</script>
+</body>
+</html>
